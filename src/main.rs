@@ -4,10 +4,9 @@ use std::thread;
 use redrss::Rss;
 use redrss::Rtype;
 use redrss::DiscordContent;
+use std::env;
 use std::fs;
 use std::time::Duration;
-
-const CONFIG_FILE: &str = "config";
 
 fn freq_converter(frequency: String) -> (Interval, u64) {
     let temp_list:Vec<&str> = frequency.split(' ').collect();
@@ -32,11 +31,12 @@ fn runner(rss_object: &Rss) {
 }
 
 fn main() {
-    let json_object = fs::read_to_string(CONFIG_FILE).expect("File Read failed");
+    let args: Vec<String> = env::args().collect();
+    let json_object = fs::read_to_string(&args[1]).expect("File Read failed");
     let rss_object = Rss::new(&json_object);
     let (freq_enum, milliseconds) = freq_converter(rss_object.frequency.clone());
     let mut scheduler = Scheduler::with_tz(chrono::Utc);
-    scheduler.every(freq_enum).at("1:00 am").run(move || runner(&rss_object));
+    scheduler.every(freq_enum).run(move || runner(&rss_object));
     let _thread_handle = scheduler.watch_thread(Duration::from_millis(milliseconds));
     loop { thread::park() };
 }
